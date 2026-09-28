@@ -1,0 +1,74 @@
+# ============================================================
+#  Ludo Buddy - one-click Android build in the cloud
+#  You do NOT need Android Studio, Flutter or Java on your PC.
+#  GitHub's servers do everything.
+#
+#  HOW TO USE
+#    1. Push this project to a GitHub repository.
+#    2. Open the "Actions" tab.
+#    3. Click "Build Android APK" on the left.
+#    4. Click "Run workflow" -> "Run workflow".
+#    5. Wait ~4 minutes, open the finished run, download the
+#       "ludo-buddy-apk" file from the Artifacts section.
+# ============================================================
+
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Build APK and AAB
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Check out the code
+        uses: actions/checkout@v4
+
+      - name: 2. Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: 3. Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: 4. Generate the Android project files
+        run: |
+          flutter create --org com.example --project-name ludo_buddy --platforms android /tmp/scaffold
+          cp -r /tmp/scaffold/android ./android
+
+      - name: 5. Set the app display name
+        run: |
+          sed -i 's/android:label="ludo_buddy"/android:label="Ludo Buddy"/' android/app/src/main/AndroidManifest.xml
+
+      - name: 6. Download the game packages
+        run: flutter pub get
+
+      - name: 7. Run the rules tests
+        run: flutter test
+
+      - name: 8. Build the release APK (for your phone)
+        run: flutter build apk --release
+
+      - name: 9. Build the release App Bundle (for Google Play)
+        run: flutter build appbundle --release
+
+      - name: 10. Save the APK so you can download it
+        uses: actions/upload-artifact@v4
+        with:
+          name: ludo-buddy-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: 11. Save the App Bundle so you can download it
+        uses: actions/upload-artifact@v4
+        with:
+          name: ludo-buddy-aab
+          path: build/app/outputs/bundle/release/app-release.aab
